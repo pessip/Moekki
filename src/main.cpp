@@ -7,12 +7,22 @@
 WiFiClient net;
 MQTTClient client;
 
-const char *ssid = "DNA-WLAN-5G-AA38";
+unsigned long lastMillis = 0;
+int postN = 0;
+
+const char *ssid = "DNA-WLAN-2G-AA38";
 const char *password = "88780760472";
 
 void connect()
 {
-  Serial.print('Connecting to MQTT Broker!');
+  Serial.print("checking wifi...");
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.print(".");
+    delay(1000);
+  }
+
+  Serial.print("\nconnecting...");
   while (!client.connect("ESP32", "try", "try"))
   {
     Serial.print(".");
@@ -54,24 +64,29 @@ void setup()
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
 
-  client.begin("test.mosquitto.org", net);
+  client.begin("broker.shiftr.io", net);
   client.onMessage(messageReceived);
+  connect();
 
   pinMode(Led, OUTPUT);
   pinMode(LED_BUILTIN, OUTPUT);
 }
 
-int value = 0;
-
 void loop()
 {
   client.loop();
 
-  digitalWrite(LED_BUILTIN, HIGH);
-  digitalWrite(Led, HIGH);
-  client.publish("/moekki", "Hi!");
-  delay(1000);
-  digitalWrite(LED_BUILTIN, LOW);
-  digitalWrite(Led, LOW);
-  delay(1000);
+  if (!client.connected())
+  {
+    connect();
+  }
+
+  // publish a message roughly every 10 seconds.
+  if (millis() - lastMillis > 10000)
+  {
+    String content = "Request: " + String(postN);
+    lastMillis = millis();
+    client.publish("/moekki", content);
+    ++postN;
+  }
 }
