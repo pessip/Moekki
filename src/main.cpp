@@ -25,7 +25,6 @@ DeviceAddress waterThermometer;
 
 // Setup variables
 unsigned long lastMillis = 0;
-int postN = 0;
 
 // Wifi connection info
 const char *ssid = "DNA-WLAN-2G-AA38";
@@ -137,20 +136,28 @@ void loop()
   // publish a message counting up roughly every second.
   if (millis() - lastMillis > 1000)
   {
-    sensors.requestTemperatures(); // Send the command to get temperature readings
+    if (!timeClient.update())
+    {
+      timeClient.forceUpdate();
+    }
 
+    // Request and prints temperatures to the serial monitot
+    Serial.print(" Requesting temperatures...");
+    sensors.requestTemperatures(); // Send the command to get temperature readings
+    Serial.println("DONE");
+    Serial.print("Temperature is: ");
+    Serial.println(sensors.getTempCByIndex(0));
     // Build JSON
     // Init JSON
-    const int capacity = JSON_OBJECT_SIZE(3);
+    const int capacity = JSON_OBJECT_SIZE(2);
     StaticJsonDocument<capacity> doc;
 
     // Input Data
     doc["temperature"] = sensors.getTempCByIndex(0);
     doc["time"] = timeClient.getEpochTime();
-    doc["postN"] = postN;
 
     // Serialize JSON
-    String content;
+    String content = "";
     serializeJson(doc, content);
 
     // Publish to MQTT
@@ -158,6 +165,5 @@ void loop()
 
     // Reset millis and increment postN
     lastMillis = millis();
-    ++postN;
   }
 }
