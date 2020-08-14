@@ -39,13 +39,10 @@ void messageReceived(String &topic, String &payload)
 
 void setup()
 {
+  // Begin Serial Monitor
   Serial.begin(115200);
-  pinMode(5, OUTPUT); // set the LED pin mode
 
-  delay(10);
-
-  // We start by connecting to a WiFi network
-
+  // Wifi Connection
   Serial.println();
   Serial.println();
   Serial.print("Connecting to ");
@@ -59,34 +56,48 @@ void setup()
     Serial.print(".");
   }
 
+  // Wifi Info
   Serial.println("");
   Serial.println("WiFi connected.");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
 
+  // COnnect to MQTT Broker
   client.begin("broker.shiftr.io", net);
   client.onMessage(messageReceived);
   connect();
 
+  // Pin Modes
   pinMode(Led, OUTPUT);
   pinMode(LED_BUILTIN, OUTPUT);
 }
 
 void loop()
 {
+  // MQTT CLient loop
   client.loop();
 
+  // Reconnect if connection is lost
   if (!client.connected())
   {
     connect();
   }
 
-  // publish a message roughly every 10 seconds.
-  if (millis() - lastMillis > 10000)
+  // publish a message counting up roughly every second.
+  if (millis() - lastMillis > 1000)
   {
     String content = "Request: " + String(postN);
     lastMillis = millis();
     client.publish("/moekki", content);
     ++postN;
+    // Turn LED on if request number is even
+    if (postN % 2 == 0)
+    {
+      digitalWrite(BUILTIN_LED, LOW);
+    }
+    else
+    {
+      digitalWrite(BUILTIN_LED, HIGH);
+    }
   }
 }
